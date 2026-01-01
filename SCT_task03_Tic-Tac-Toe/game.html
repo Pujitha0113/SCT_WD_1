@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Tic Tac Toe</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: linear-gradient(135deg, #ff6b6b, #4ecdc4); display: flex; justify-content: center; align-items: center; min-height: 100vh; color: #333; }
+        .app { background: white; border-radius: 20px; padding: 2rem; box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center; max-width: 500px; width: 90%; }
+        .mode-selector { margin-bottom: 1rem; }
+        .mode-btn { padding: 0.5rem 1rem; margin: 0 0.5rem; border: none; border-radius: 20px; background: #4ecdc4; color: white; cursor: pointer; transition: background 0.3s; }
+        .mode-btn:hover, .mode-btn.active { background: #45b7aa; }
+        .mode-btn:disabled { background: #ddd; cursor: not-allowed; }
+        .status { font-size: 1.2rem; margin: 1rem 0; font-weight: bold; color: #ff6b6b; }
+        .board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin: 1rem auto; width: 300px; max-width: 100%; }
+        .cell { aspect-ratio: 1; background: #f8f9fa; border: 2px solid #dee2e6; border-radius: 10px; display: flex; justify-content: center; align-items: center; font-size: 3rem; font-weight: bold; cursor: pointer; transition: all 0.3s; user-select: none; }
+        .cell:hover:not(.occupied) { background: #e9ecef; transform: scale(1.05); }
+        .cell.x { color: #ff6b6b; } .cell.o { color: #4ecdc4; }
+        .cell.winner { background: #ffd700 !important; animation: winPulse 0.5s; }
+        @keyframes winPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        .controls { margin-top: 1rem; }
+        .reset-btn { padding: 0.75rem 1.5rem; border: none; border-radius: 20px; background: #ff6b6b; color: white; font-size: 1rem; cursor: pointer; transition: background 0.3s; }
+        .reset-btn:hover { background: #ff5252; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; padding: 2rem; border-radius: 20px; text-align: center; max-width: 300px; }
+        .modal h2 { color: #ff6b6b; margin-bottom: 1rem; }
+        .close-btn { margin-top: 1rem; }
+        @media (max-width: 480px) { .board { width: 250px; } .cell { font-size: 2rem; } }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <h1>🎮 Tic Tac Toe</h1>
+        <div class="mode-selector">
+            <button class="mode-btn active" data-mode="human">vs Human</button>
+            <button class="mode-btn" data-mode="computer">vs Computer</button>
+        </div>
+        <div class="status" id="status">Player X's Turn</div>
+        <div class="board" id="board"></div>
+        <div class="controls">
+            <button class="reset-btn" id="reset">New Game</button>
+        </div>
+    </div>
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <h2 id="modalMessage"></h2>
+            <button class="reset-btn close-btn" id="closeModal">Play Again</button>
+        </div>
+    </div>
+    <script>
+        let board = ['', '', '', '', '', '', '', '', '']; let currentPlayer = 'X'; let gameMode = 'human'; let gameActive = true; let scores = { X: 0, O: 0 };
+        const winningConditions = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+        const statusEl = document.getElementById('status'); const boardEl = document.getElementById('board'); const resetBtn = document.getElementById('reset'); const modal = document.getElementById('modal'); const modalMessage = document.getElementById('modalMessage'); const closeModal = document.getElementById('closeModal'); const modeBtns = document.querySelectorAll('.mode-btn');
+        function initBoard() { boardEl.innerHTML = ''; board.forEach((_, index) => { const cell = document.createElement('div'); cell.classList.add('cell'); cell.dataset.index = index; cell.addEventListener('click', handleCellClick); boardEl.appendChild(cell); }); }
+        function handleCellClick(e) { const index = e.target.dataset.index; if (board[index] !== '' || !gameActive || (gameMode === 'computer' && currentPlayer === 'O')) return; board[index] = currentPlayer; e.target.textContent = currentPlayer; e.target.classList.add('occupied', currentPlayer.toLowerCase()); if (checkWin()) { gameActive = false; highlightWin(); scores[currentPlayer]++; statusEl.innerHTML = `<strong>Scores: X: ${scores.X} | O: ${scores.O}</strong>`; showModal(`${currentPlayer} Wins!`); } else if (board.every(cell => cell !== '')) { gameActive = false; showModal("It's a Tie!"); } else { currentPlayer = currentPlayer === 'X' ? 'O' : 'X'; statusEl.textContent = `Player ${currentPlayer}'s Turn`; if (gameMode === 'computer' && currentPlayer === 'O') setTimeout(computerMove, 500); } }
+        function computerMove() { const emptyCells = board.map((cell, i) => cell === '' ? i : null).filter(i => i !== null); if (emptyCells.length > 0) { const randomIndex = emptyCells[Math.floor(Math.random() * emptyCells.length)]; board[randomIndex] = 'O'; const cell = boardEl.children[randomIndex]; cell.textContent = 'O'; cell.classList.add('occupied', 'o'); if (checkWin()) { gameActive = false; highlightWin(); scores.O++; statusEl.innerHTML = `<strong>Scores: X: ${scores.X} | O: ${scores.O}</strong>`; showModal('O Wins!'); } else if (board.every(cell => cell !== '')) { gameActive = false; showModal("It's a Tie!"); } else { currentPlayer = 'X'; statusEl.textContent = `Player ${currentPlayer}'s Turn`; } } }
+        function checkWin() { return winningConditions.some(condition => condition.every(i => board[i] === currentPlayer)); }
+        function highlightWin() { winningConditions.forEach(condition => { const [a, b, c] = condition; if (board[a] === currentPlayer && board[a] === board[b] && board[a] === board[c]) [a, b, c].forEach(i => boardEl.children[i].classList.add('winner')); }); }
+        function showModal(message) { modalMessage.textContent = message; modal.style.display = 'flex'; }
+        modeBtns.forEach(btn => btn.addEventListener('click', () => { modeBtns.forEach(b => b.classList.remove('active')); btn.classList.add('active'); gameMode = btn.dataset.mode; resetGame(); })); resetBtn.addEventListener('click', resetGame); closeModal.addEventListener('click', resetGame);
+        function resetGame() { board = ['', '', '', '', '', '', '', '', '']; currentPlayer = 'X'; gameActive = true; statusEl.textContent = `Player ${currentPlayer}'s Turn`; modal.style.display = 'none'; initBoard(); }
+        initBoard();
+    </script>
+</body>
+</html>
